@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weight Lifting Plan Builder</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1b1d21;
+    --muted: #6b7280;
+    --line: #d9dce1;
+    --accent: #2f6df6;
+    --warm: #8a6d1f;
+    --warmbg: #fdf6e3;
+    --top: #a3341f;
+    --topbg: #fdeee9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --card: #1c1f25;
+      --ink: #e8eaed;
+      --muted: #9aa1ab;
+      --line: #333841;
+      --accent: #6a9bff;
+      --warm: #e0c470;
+      --warmbg: #2a2415;
+      --top: #f0a08a;
+      --topbg: #2e1a15;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 20px 64px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  h3 { font-size: 15px; margin: 28px 0 8px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input, select {
+    font: inherit;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { flex: 1 1 140px; min-width: 120px; }
+  button {
+    font: inherit;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.08); color: #fff; }
+  button.link {
+    border: none; background: none; color: var(--muted);
+    padding: 4px 6px; font-size: 13px;
+  }
+  button.link:hover { color: var(--top); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 5px 9px;
+    text-align: right;
+  }
+  th { background: rgba(127,127,127,.08); font-weight: 600; font-size: 13px; }
+  td:first-child, th:first-child { text-align: left; }
+  tr.warmup td { background: var(--warmbg); color: var(--warm); }
+  tr.topset td { background: var(--topbg); color: var(--top); font-weight: 600; }
+  .exgrid { display: grid; gap: 8px; }
+  .exrow {
+    display: grid;
+    grid-template-columns: 1.6fr .8fr .8fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .exrow .head { color: var(--muted); font-size: 12px; }
+  .cycletag {
+    display: inline-block; font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px;
+    margin-left: 8px; vertical-align: middle;
+  }
+  .est { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .err {
+    color: var(--top); background: var(--topbg); border: 1px solid var(--top);
+    border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;
+  }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 20px; }
+  .session { margin-bottom: 26px; }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  @media (max-width: 620px) {
+    .exrow { grid-template-columns: 1fr 1fr; }
+    .exrow .head { display: none; }
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .card.noprint, .actions { display: none; }
+    .card { border: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Weight Lifting Plan Builder</h1>
+  <p class="sub">Enter a tested set per exercise. Estimated 1RM uses Epley, shaded down for safety, then each cycle's %PR table is applied.</p>
+
+  <div class="card noprint">
+    <h2>Exercises &amp; tested sets</h2>
+    <div class="exgrid" id="exgrid"></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" id="addex">+ Add exercise</button>
+    </div>
+
+    <h2>Routine</h2>
+    <div class="row">
+      <div>
+        <label for="dpw">Days per week</label>
+        <input type="number" id="dpw" min="1" max="7" step="1" value="3">
+      </div>
+      <div>
+        <label for="factor">Conservative factor</label>
+        <input type="number" id="factor" min="0.7" max="1" step="0.01" value="0.95">
+      </div>
+      <div>
+        <label for="step">Round to (kg)</label>
+        <input type="number" id="step" min="0.5" max="10" step="0.5" value="2.5">
+      </div>
+      <div>
+        <label for="unit">Unit label</label>
+        <select id="unit"><option>kg</option><option>lb</option></select>
+      </div>
+    </div>
+    <p class="legend">Day groups rotate across training days. Each group advances one cycle every time it is trained, so with two groups at 3 days/week: W1D1 lower cycle&nbsp;1, W1D2 upper cycle&nbsp;1, W1D3 lower cycle&nbsp;2, and so on.</p>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="primary" id="build">Build plan</button>
+      <button type="button" id="csv">Download CSV</button>
+      <button type="button" id="print">Print / PDF</button>
+    </div>
+  </div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+// %PR and target reps per set for each cycle.
+const CYCLES = [
+  { name: "cycle 1", focus: "volume",   sets: [[50,10],[70,5],[85,3],[80,5],[70,10],[70,10]] },
+  { name: "cycle 2", focus: "build",    sets: [[50,10],[75,5],[85,3],[90,3],[85,5],[80,7]] },
+  { name: "cycle 3", focus: "strength", sets: [[50,10],[65,7],[75,5],[85,3],[100,2],[85,5]] },
+  { name: "cycle 4", focus: "limit",    sets: [[50,10],[70,5],[85,3],[105,1],[100,1],[85,5]] },
+];
+const SET_LABELS = ["Warm Up", "1", "2", "3", "4", "5"];
+
+const DEFAULT_EXERCISES = [
+  { name: "Squat",       weight: 50, reps: 8, group: "lower" },
+  { name: "Hip Thrust",  weight: 60, reps: 8, group: "lower" },
+  { name: "Bench Press", weight: 30, reps: 8, group: "upper" },
+  { name: "Deadlift",    weight: 60, reps: 8, group: "upper" },
+];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const fmt = (n) => Number(n.toFixed(2)).toString();
+
+const epley1rm = (w, r) => w * (1 + r / 30);
+const roundDown = (v, s) => (s > 0 ? Math.floor(v / s) * s : v);
+const roundNear = (v, s) => (s > 0 ? Math.round(v / s) * s : v);
+
+/* ---------- exercise input rows ---------- */
+
+function exRow(ex = { name: "", weight: "", reps: "", group: "" }) {
+  const div = document.createElement("div");
+  div.className = "exrow";
+  div.innerHTML = `
+    <div><span class="head">Exercise</span><input class="ex-name" value="${esc(ex.name)}" placeholder="Squat"></div>
+    <div><span class="head">Weight</span><input class="ex-weight" type="number" min="0" step="0.5" value="${esc(ex.weight)}" placeholder="50"></div>
+    <div><span class="head">Reps</span><input class="ex-reps" type="number" min="1" max="20" step="1" value="${esc(ex.reps)}" placeholder="8"></div>
+    <div><span class="head">Day group</span><input class="ex-group" value="${esc(ex.group)}" placeholder="lower"></div>
+    <div><button type="button" class="link" title="Remove">&times;</button></div>`;
+  div.querySelector("button").onclick = () => div.remove();
+  return div;
+}
+
+function renderInputs() {
+  const grid = $("exgrid");
+  grid.innerHTML = "";
+  DEFAULT_EXERCISES.forEach((ex) => grid.appendChild(exRow(ex)));
+}
+
+function readConfig() {
+  const exercises = [];
+  const errors = [];
+  $("exgrid").querySelectorAll(".exrow").forEach((row, i) => {
+    const name = row.querySelector(".ex-name").value.trim();
+    const weight = parseFloat(row.querySelector(".ex-weight").value);
+    const reps = parseInt(row.querySelector(".ex-reps").value, 10);
+    const group = row.querySelector(".ex-group").value.trim() || "day";
+    if (!name && !row.querySelector(".ex-weight").value) return; // blank row, skip
+    if (!name) errors.push(`Row ${i + 1}: missing exercise name.`);
+    if (!(weight > 0)) errors.push(`${name || "Row " + (i + 1)}: weight must be greater than 0.`);
+    if (!(reps >= 1)) errors.push(`${name || "Row " + (i + 1)}: reps must be at least 1.`);
+    if (reps > 12) errors.push(`${name}: ${reps} reps makes the Epley 1RM estimate unreliable — test a set of 12 or fewer.`);
+    exercises.push({ name, weight, reps, group });
+  });
+  if (!exercises.length) errors.push("Add at least one exercise.");
+
+  const cfg = {
+    exercises,
+    daysPerWeek: parseInt($("dpw").value, 10) || 3,
+    factor: parseFloat($("factor").value) || 0.95,
+    step: parseFloat($("step").value) || 2.5,
+    unit: $("unit").value,
+  };
+  if (cfg.daysPerWeek < 1 || cfg.daysPerWeek > 7) errors.push("Days per week must be between 1 and 7.");
+  if (!(cfg.factor > 0 && cfg.factor <= 1)) errors.push("Conservative factor must be between 0 and 1.");
+  return { cfg, errors };
+}
+
+/* ---------- plan maths ---------- */
+
+function computePRs(cfg) {
+  const prs = {};
+  cfg.exercises.forEach((ex) => {
+    prs[ex.name] = {
+      epley: epley1rm(ex.weight, ex.reps),
+      pr: roundDown(epley1rm(ex.weight, ex.reps) * cfg.factor, cfg.step),
+    };
+  });
+  return prs;
+}
+
+function groupsOf(cfg) {
+  const order = [];
+  const map = new Map();
+  cfg.exercises.forEach((ex) => {
+    if (!map.has(ex.group)) { map.set(ex.group, []); order.push(ex.group); }
+    map.get(ex.group).push(ex.name);
+  });
+  return { order, map };
+}
+
+// One session per (group, cycle), laid out over the weekly rotation.
+function buildSchedule(cfg) {
+  const { order } = groupsOf(cfg);
+  const done = new Map(order.map((g) => [g, 0]));
+  const schedule = [];
+  let slot = 0;
+  const total = order.length * CYCLES.length;
+  // Guard against a pathological loop; every group needs CYCLES.length turns.
+  for (let guard = 0; schedule.length < total && guard < total * order.length + 50; guard++) {
+    const group = order[slot % order.length];
+    const week = Math.floor(slot / cfg.daysPerWeek) + 1;
+    const day = (slot % cfg.daysPerWeek) + 1;
+    slot++;
+    const cycleIndex = done.get(group);
+    if (cycleIndex >= CYCLES.length) continue;
+    done.set(group, cycleIndex + 1);
+    schedule.push({ week, day, group, cycleIndex });
+  }
+  return schedule;
+}
+
+function sessionRows(cfg, exercises, cycleIndex, prs) {
+  return CYCLES[cycleIndex].sets.map(([pct, reps], i) => ({
+    label: SET_LABELS[i] ?? String(i),
+    pct,
+    reps,
+    weights: exercises.map((name) => roundNear(prs[name].pr * pct / 100, cfg.step)),
+  }));
+}
+
+/* ---------- rendering ---------- */
+
+let lastPlan = null;
+
+function render(cfg, prs, schedule) {
+  const { map } = groupsOf(cfg);
+  const u = cfg.unit;
+  let html = "";
+
+  html += `<div class="card"><h2>Estimated 1RM PRs</h2><table><thead><tr>
+    <th>Exercise</th><th>Tested set</th><th>Epley 1RM</th><th>Conservative PR</th></tr></thead><tbody>`;
+  cfg.exercises.forEach((ex) => {
+    html += `<tr><td>${esc(ex.name)}</td><td>${fmt(ex.weight)}${u} &times; ${ex.reps}</td>
+      <td>${prs[ex.name].epley.toFixed(1)}${u}</td><td><b>${fmt(prs[ex.name].pr)}${u}</b></td></tr>`;
+  });
+  html += `</tbody></table><p class="est">Epley &times; ${cfg.factor}, rounded down to the nearest ${fmt(cfg.step)}${u}.</p></div>`;
+
+  html += `<div class="card">`;
+  schedule.forEach((s) => {
+    const cyc = CYCLES[s.cycleIndex];
+    const exs = map.get(s.group);
+    html += `<div class="session"><h3>Week ${s.week} Day ${s.day} &mdash; ${esc(s.group)}
+      <span class="cycletag">${cyc.name} &middot; ${cyc.focus}</span></h3>`;
+    html += `<table><thead><tr><th>Set</th><th>% PR</th>`;
+    exs.forEach((n) => { html += `<th>${esc(n)} (${fmt(prs[n].pr)}${u})</th>`; });
+    html += `<th>Reps</th></tr></thead><tbody>`;
+    sessionRows(cfg, exs, s.cycleIndex, prs).forEach((r) => {
+      const cls = r.label === "Warm Up" ? "warmup" : (r.pct >= 100 ? "topset" : "");
+      html += `<tr class="${cls}"><td>${r.label}</td><td>${r.pct}%</td>`;
+      r.weights.forEach((w) => { html += `<td>${fmt(w)}</td>`; });
+      html += `<td>${r.reps}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+  html += `<p class="legend">Highlighted rows: warm-up sets, and top sets at or above 100% of the estimated PR — treat those as genuine max attempts.</p></div>`;
+
+  $("out").innerHTML = html;
+}
+
+function build() {
+  const { cfg, errors } = readConfig();
+  if (errors.length) {
+    $("out").innerHTML = `<div class="err"><b>Fix these first:</b><ul><li>${errors.map(esc).join("</li><li>")}</li></ul></div>`;
+    lastPlan = null;
+    return;
+  }
+  const prs = computePRs(cfg);
+  const schedule = buildSchedule(cfg);
+  render(cfg, prs, schedule);
+  lastPlan = { cfg, prs, schedule };
+}
+
+function downloadCsv() {
+  if (!lastPlan) { build(); if (!lastPlan) return; }
+  const { cfg, prs, schedule } = lastPlan;
+  const { map } = groupsOf(cfg);
+  const q = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const lines = [["week","day","group","cycle","focus","set","pct_pr","exercise","weight","reps"].join(",")];
+  schedule.forEach((s) => {
+    const cyc = CYCLES[s.cycleIndex];
+    const exs = map.get(s.group);
+    sessionRows(cfg, exs, s.cycleIndex, prs).forEach((r) => {
+      exs.forEach((name, i) => {
+        lines.push([s.week, s.day, s.group, cyc.name, cyc.focus, r.label,
+                    r.pct, name, fmt(r.weights[i]), r.reps].map(q).join(","));
+      });
+    });
+  });
+  const blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "lifting-plan.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+$("addex").onclick = () => $("exgrid").appendChild(exRow());
+$("build").onclick = build;
+$("csv").onclick = downloadCsv;
+$("print").onclick = () => window.print();
+$("exgrid").addEventListener("keydown", (e) => { if (e.key === "Enter") build(); });
+
+renderInputs();
+build();
+</script>
+</body>
+</html>
